@@ -1,0 +1,159 @@
+name: Compile the book to PDF
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**/*.md'
+      - '.github/workflows/compile-pdf.yml'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Create the output directory
+        run: mkdir -p dist
+
+      - name: Assemble the manuscript
+        run: |
+          set -euo pipefail
+          D=docs
+          FILES=(
+            "$D/README.md"
+            "$D/chapter-1-why-one-central-rag-fails/chapter-1-why-one-central-rag-fails.md"
+            "$D/chapter-1-why-one-central-rag-fails/graph-rag-explained.md"
+            "$D/chapter-2-building-a-rag-the-paved-road/chapter-2-building-a-rag-the-paved-road.md"
+            "$D/chapter-2-building-a-rag-the-paved-road/managed-search-in-depth.md"
+            "$D/chapter-2-building-a-rag-the-paved-road/pipeline-tier-1-managed.md"
+            "$D/chapter-2-building-a-rag-the-paved-road/pipeline-tier-2-assembled.md"
+            "$D/chapter-2-building-a-rag-the-paved-road/pipeline-tier-3-bespoke.md"
+            "$D/chapter-3-exposing-a-rag-securely/chapter-3-exposing-a-rag-securely.md"
+            "$D/chapter-3-exposing-a-rag-securely/securing-mcp-and-a2a-interfaces.md"
+            "$D/chapter-4-proving-retrieval-quality/chapter-4-proving-retrieval-quality.md"
+            "$D/chapter-4-proving-retrieval-quality/tracing-across-the-agent-mesh.md"
+            "$D/chapter-5-cost-attribution-and-chargeback/chapter-5-cost-attribution-and-chargeback.md"
+            "$D/chapter-5-cost-attribution-and-chargeback/cost-optimisation-catalogue.md"
+            "$D/chapter-6-security-and-safe-operations/chapter-6-security-and-safe-operations.md"
+            "$D/chapter-6-security-and-safe-operations/defending-against-prompt-injection.md"
+            "$D/chapter-7-keeping-knowledge-fresh/chapter-7-keeping-knowledge-fresh.md"
+            "$D/chapter-8-data-you-cannot-move/chapter-8-data-you-cannot-move.md"
+            "$D/chapter-8-data-you-cannot-move/choosing-ingest-tool-or-agent.md"
+            "$D/chapter-9-on-premises-and-air-gapped/chapter-9-on-premises-and-air-gapped.md"
+            "$D/chapter-10-discovering-what-already-exists/chapter-10-discovering-what-already-exists.md"
+            "$D/chapter-11-measuring-whether-it-works/chapter-11-measuring-whether-it-works.md"
+          )
+
+          # Fail loudly if the list has drifted from what is in the repository,
+          # in either direction. A silently incomplete book is worse than no build.
+          for f in "${FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error file=$f::Listed in the PDF build but missing from the repository"
+              exit 1
+            fi
+          done
+          while IFS= read -r found; do
+            printf '%s\n' "${FILES[@]}" | grep -qxF "$found" || {
+              echo "::error file=$found::Present in docs/ but missing from the PDF build list"
+              exit 1
+            }
+          done < <(find "$D" -name '*.md' | sort)
+
+          # Title page and PDF metadata.
+          cat > dist/combined.md <<'EOF'
+          ---
+          title: "Enterprise RAG: An Operating Model"
+          subtitle: "Why one central RAG fails, what replaces it, and what the platform team is for"
+          date: \today
+          lang: en-GB
+          ---
+
+          EOF
+
+          for f in "${FILES[@]}"; do
+            cat "$f" >> dist/combined.md
+            printf '\n\n\\newpage\n\n' >> dist/combined.md
+          done
+
+          # Relative links between chapters are meaningless in a single PDF.
+          # Drop the navigation footers entirely, and demote in-text .md links
+          # to plain prose so the sentence still reads correctly.
+          # perl rather than sed: identical behaviour on GNU and BSD, so this
+          # can be tested locally and trusted to match the runner.
+          perl -ni -e 'print unless /^\[(\x{2190}|Start|Back).*\]\(.*\.md.*\)( \|.*)?$/' dist/combined.md
+          perl -i -pe 's/\[([^\]]+)\]\([^)]*\.md[^)]*\)/$1/g' dist/combined.md
+
+          # The book draws diagrams with box-drawing and geometric characters.
+          # TeX Live inside the Pandoc image carries no font containing them, so
+          # transliterate to ASCII here rather than depend on a font being present.
+          # Diagrams are monospaced blocks, so ASCII renders them identically.
+          python3 - <<'PY'
+          import pathlib
+          MAP = {
+              '\u2500': '-', '\u2550': '=', '\u2502': '|', '\u2503': '|',
+              '\u250c': '+', '\u2510': '+', '\u2514': '+', '\u2518': '+',
+              '\u251c': '+', '\u2524': '+', '\u252c': '+', '\u2534': '+',
+              '\u253c': '+', '\u2538': '+',
+              '\u2588': '#', '\u2591': '.',
+              '\u2192': '->', '\u2190': '<-', '\u2191': '^',
+              '\u25bc': 'v', '\u25b2': '^', '\u25ba': '>', '\u25c4': '<',
+              '\u25b8': '>', '\u25cf': '*', '\u2605': '*',
+              '\u2715': 'x', '\u26a0': '!', '\u2248': '~',
+          }
+          p = pathlib.Path('dist/combined.md')
+          t = p.read_text(encoding='utf-8')
+          for k, v in MAP.items():
+              t = t.replace(k, v)
+          # Typographic punctuation that pdfTeX renders natively is left alone.
+          KEEP = {'\u2013', '\u2014', '\u2026'}
+          leftover = sorted({c for c in t if ord(c) > 0x2000 and c not in KEEP})
+          if leftover:
+              raise SystemExit('Untranslatable characters remain: %r' % leftover)
+          p.write_text(t, encoding='utf-8')
+          PY
+
+          nav=$(grep -c '^\[' dist/combined.md || true)
+          links=$(grep -c '](.*\.md' dist/combined.md || true)
+          if [ "$links" -ne 0 ]; then
+            echo "::error::$links unresolved .md links remain in the manuscript"
+            exit 1
+          fi
+          echo "Assembled $(wc -l < dist/combined.md) lines from ${#FILES[@]} files; $links dangling links."
+
+      - name: Render to PDF with Pandoc
+        uses: docker://pandoc/latex:3.8
+        with:
+          args: >-
+            dist/combined.md
+            --output=dist/Enterprise-RAG-An-Operating-Model.pdf
+            --from=gfm
+            --toc
+            --toc-depth=2
+            --number-sections
+            -V documentclass=report
+            -V geometry:margin=1in
+            -V colorlinks=true
+            -V linkcolor=black
+            -V toccolor=black
+
+      - name: Upload the PDF as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Enterprise-RAG-An-Operating-Model
+          path: dist/Enterprise-RAG-An-Operating-Model.pdf
+          retention-days: 90
+
+      - name: Attach the PDF to the release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Enterprise-RAG-An-Operating-Model.pdf

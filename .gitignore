@@ -1,0 +1,13 @@
+# Working notes and scratch material, not for publication
+temp/
+
+# Build output
+dist/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
+.vscode/
+.idea/
