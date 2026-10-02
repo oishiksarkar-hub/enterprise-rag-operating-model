@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'docs/**/*.md'
+      - 'README.md'
       - '.github/workflows/compile-pdf.yml'
   workflow_dispatch:
   release:
@@ -19,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Create the output directory
         run: mkdir -p dist
@@ -146,14 +147,21 @@ jobs:
             -V toccolor=black
 
       - name: Upload the PDF as a workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Enterprise-RAG-An-Operating-Model
           path: dist/Enterprise-RAG-An-Operating-Model.pdf
           retention-days: 90
 
-      - name: Attach the PDF to the release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+      - name: Publish PDF to GitHub Release
+        uses: softprops/action-gh-release@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tag_name: ${{ github.event_name == 'release' && github.ref_name || 'latest' }}
+          name: ${{ github.event_name == 'release' && github.event.release.name || 'Enterprise RAG: An Operating Model (Latest PDF)' }}
+          body: |
+            Complete manuscript of **Enterprise RAG: An Operating Model**.
+            Compiled automatically from `docs/`.
           files: dist/Enterprise-RAG-An-Operating-Model.pdf
+          make_latest: true
