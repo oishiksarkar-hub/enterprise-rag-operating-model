@@ -159,7 +159,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.event_name == 'release' && github.ref_name || 'latest' }}
-          name: ${{ github.event_name == 'release' && github.event.release.name || 'Enterprise RAG: An Operating Model (Latest PDF)' }}
+          name: "Enterprise RAG: An Operating Model (Latest PDF)"
           body: |
             Complete manuscript of **Enterprise RAG: An Operating Model**.
             Compiled automatically from `docs/`.
