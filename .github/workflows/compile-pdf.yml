@@ -139,7 +139,6 @@ jobs:
             --from=gfm
             --toc
             --toc-depth=2
-            --number-sections
             -V documentclass=report
             -V geometry:margin=1in
             -V colorlinks=true
@@ -165,3 +164,44 @@ jobs:
             Compiled automatically from `docs/`.
           files: dist/Enterprise-RAG-An-Operating-Model.pdf
           make_latest: true
+
+      - name: Deploy PDF and Reader to GitHub Pages branch
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p gh-pages-dist
+          cp dist/Enterprise-RAG-An-Operating-Model.pdf gh-pages-dist/
+          cat << 'EOF' > gh-pages-dist/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Enterprise RAG: An Operating Model</title>
+            <style>
+              html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+              iframe { width: 100%; height: 100%; border: none; }
+              .fallback { padding: 2rem; text-align: center; }
+              a { color: #58a6ff; text-decoration: none; font-weight: 600; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <iframe src="Enterprise-RAG-An-Operating-Model.pdf" type="application/pdf">
+              <div class="fallback">
+                <h2>Enterprise RAG: An Operating Model</h2>
+                <p>Your browser does not support inline PDFs. <a href="Enterprise-RAG-An-Operating-Model.pdf">Click here to view or download the PDF</a>.</p>
+              </div>
+            </iframe>
+          </body>
+          </html>
+          EOF
+          touch gh-pages-dist/.nojekyll
+
+          cd gh-pages-dist
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b gh-pages
+          git add .
+          git commit -m "deploy: update PDF manuscript and reader [skip ci]"
+          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git gh-pages

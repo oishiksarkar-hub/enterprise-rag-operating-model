@@ -2,6 +2,7 @@
 
 ### Enterprise RAG doesn't scale. Neither does breaking it up — without a platform team.
 
+[![Read Online](https://img.shields.io/badge/Read_Online-PDF_Browser-blue.svg?logo=googlechrome&logoColor=white)](https://oishiksarkar-hub.github.io/enterprise-rag-operating-model/)
 [![Download PDF](https://img.shields.io/badge/Download_Book-PDF-crimson.svg?logo=adobeacrobatreader&logoColor=white)](https://github.com/oishiksarkar-hub/enterprise-rag-operating-model/releases/latest/download/Enterprise-RAG-An-Operating-Model.pdf)
 
 Eleven chapters on what it actually takes to run retrieval-augmented generation across a large organisation: why the obvious architecture fails, what replaces it, and the bill that replacement comes with.
@@ -28,8 +29,9 @@ Written for enterprise architects, platform engineering leaders, and the executi
 
 ## Read it
 
-- 📥 **[Download the complete book (PDF)](https://github.com/oishiksarkar-hub/enterprise-rag-operating-model/releases/latest/download/Enterprise-RAG-An-Operating-Model.pdf)** — single continuous manuscript with table of contents and page numbers.
-- 📖 **[Read online: Start here](docs/README.md)** — introduction, the full map, and how to read it.
+- 🌐 **[Read PDF in Browser](https://oishiksarkar-hub.github.io/enterprise-rag-operating-model/)** — open and read online in the browser without downloading (also viewable via [Direct Web Viewer](https://docs.google.com/viewer?url=https%3A%2F%2Fgithub.com%2Foishiksarkar-hub%2Fenterprise-rag-operating-model%2Freleases%2Fdownload%2Flatest%2FEnterprise-RAG-An-Operating-Model.pdf)).
+- 📥 **[Download PDF](https://github.com/oishiksarkar-hub/enterprise-rag-operating-model/releases/latest/download/Enterprise-RAG-An-Operating-Model.pdf)** — download the standalone PDF file with table of contents and page numbers.
+- 📖 **[Read on GitHub: Start here](docs/README.md)** — introduction, the full map, and how to read it.
 
 Or go straight to a chapter:
 
